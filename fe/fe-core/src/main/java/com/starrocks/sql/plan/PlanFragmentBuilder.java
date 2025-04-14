@@ -623,11 +623,7 @@ public class PlanFragmentBuilder {
             scanNode.setUnUsedOutputStringColumns(unUsedOutputColumnIds);
         }
 
-        @Override
-        public PlanFragment visitPhysicalProject(OptExpression optExpr, ExecPlan context) {
-            PhysicalProjectOperator node = (PhysicalProjectOperator) optExpr.getOp();
-            PlanFragment inputFragment = visit(optExpr.inputAt(0), context);
-
+			 void helper(OptExpression optExpr, ExecPlan context) {
             Preconditions.checkState(!node.getColumnRefMap().isEmpty());
 
             TupleDescriptor tupleDescriptor = context.getDescTbl().createTupleDescriptor();
@@ -672,6 +668,15 @@ public class PlanFragmentBuilder {
                             commonSubOperatorMap);
 
             projectNode.setHasNullableGenerateChild();
+			 }
+
+        @Override
+        public PlanFragment visitPhysicalProject(OptExpression optExpr, ExecPlan context) {
+            PhysicalProjectOperator node = (PhysicalProjectOperator) optExpr.getOp();
+            PlanFragment inputFragment = visit(optExpr.inputAt(0), context);
+
+					  helper(optExpr, context);
+					
             projectNode.computeStatistics(optExpr.getStatistics());
             currentExecGroup.add(projectNode);
 
@@ -693,50 +698,8 @@ public class PlanFragmentBuilder {
                 return inputFragment;
             }
 
-            Preconditions.checkState(!node.getColumnRefMap().isEmpty());
-
-            TupleDescriptor tupleDescriptor = context.getDescTbl().createTupleDescriptor();
-
-            Map<SlotId, Expr> commonSubOperatorMap = Maps.newHashMap();
-            for (Map.Entry<ColumnRefOperator, ScalarOperator> entry : node.getCommonSubOperatorMap().entrySet()) {
-                Expr expr = ScalarOperatorToExpr.buildExecExpression(entry.getValue(),
-                        new ScalarOperatorToExpr.FormatterContext(context.getColRefToExpr(),
-                                node.getCommonSubOperatorMap()));
-
-                commonSubOperatorMap.put(new SlotId(entry.getKey().getId()), expr);
-
-                SlotDescriptor slotDescriptor =
-                        context.getDescTbl().addSlotDescriptor(tupleDescriptor, new SlotId(entry.getKey().getId()));
-                slotDescriptor.setIsNullable(expr.isNullable());
-                slotDescriptor.setIsMaterialized(false);
-                slotDescriptor.setType(expr.getType());
-                context.getColRefToExpr().put(entry.getKey(), new SlotRef(entry.getKey().toString(), slotDescriptor));
-            }
-
-            Map<SlotId, Expr> projectMap = Maps.newHashMap();
-            for (Map.Entry<ColumnRefOperator, ScalarOperator> entry : node.getColumnRefMap().entrySet()) {
-                Expr expr = ScalarOperatorToExpr.buildExecExpression(entry.getValue(),
-                        new ScalarOperatorToExpr.FormatterContext(context.getColRefToExpr(), node.getColumnRefMap()));
-
-                projectMap.put(new SlotId(entry.getKey().getId()), expr);
-
-                SlotDescriptor slotDescriptor =
-                        context.getDescTbl().addSlotDescriptor(tupleDescriptor, new SlotId(entry.getKey().getId()));
-                slotDescriptor.setIsNullable(expr.isNullable());
-                slotDescriptor.setIsMaterialized(true);
-                slotDescriptor.setType(expr.getType());
-                context.getColRefToExpr().put(entry.getKey(), new SlotRef(entry.getKey().toString(), slotDescriptor));
-            }
-
-            ProjectNode projectNode =
-                    new ProjectNode(context.getNextNodeId(),
-                            tupleDescriptor,
-                            inputFragment.getPlanRoot(),
-                            projectMap,
-                            commonSubOperatorMap);
-
-            projectNode.setHasNullableGenerateChild();
-
+					helper(optExpr, context);
+												
             Optional.ofNullable(optExpression.getStatistics()).ifPresent(statistics -> {
                 Statistics.Builder b = Statistics.builder();
                 b.setOutputRowCount(statistics.getOutputRowCount());
