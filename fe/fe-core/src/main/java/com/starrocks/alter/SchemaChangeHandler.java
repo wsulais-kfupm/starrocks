@@ -2410,6 +2410,48 @@ public class SchemaChangeHandler extends AlterHandler {
         }
     }
 
+	private void updateNotInTest(String tableName, String partitionName, AgentBatchTask batchTask,
+		int totalTaskNum, MarkedCountDownLatch<Long, Set<Long>> countDownLatch) {
+        if (!FeConstants.runningUnitTest) {
+            // send all tasks and wait them finished
+            AgentTaskQueue.addBatchTask(batchTask);
+            AgentTaskExecutor.submit(batchTask);
+            LOG.info("send update tablet meta task for table {}, partitions {}, number: {}",
+                    tableName, partitionName, batchTask.getTaskNum());
+
+            // estimate timeout
+            long timeout = Config.tablet_create_timeout_second * 1000L * totalTaskNum;
+            timeout = Math.min(timeout, Config.max_create_table_timeout_second * 1000L);
+            boolean ok = false;
+            try {
+                ok = countDownLatch.await(timeout, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+                LOG.warn("InterruptedException: ", e);
+            }
+
+            if (!ok || !countDownLatch.getStatus().ok()) {
+                String errMsg = "Failed to update partition[" + partitionName + "]. tablet meta.";
+                // clear tasks
+                AgentTaskQueue.removeBatchTask(batchTask, TTaskType.UPDATE_TABLET_META_INFO);
+
+                if (!countDownLatch.getStatus().ok()) {
+                    errMsg += " Error: " + countDownLatch.getStatus().getErrorMsg();
+                } else {
+                    List<Map.Entry<Long, Set<Long>>> unfinishedMarks = countDownLatch.getLeftMarks();
+                    // only show at most 3 results
+                    List<Map.Entry<Long, Set<Long>>> subList =
+                            unfinishedMarks.subList(0, Math.min(unfinishedMarks.size(), 3));
+                    if (!subList.isEmpty()) {
+                        errMsg += " Unfinished mark: " + Joiner.on(", ").join(subList);
+                    }
+                }
+                errMsg += ". This operation maybe partial successfully, You should retry until success.";
+                LOG.warn(errMsg);
+                throw new DdlException(errMsg);
+            }
+        }
+		}
+
     /**
      * Update one specified partition's binlog config by partition name of table
      * This operation may return partial successfully, with a exception to inform user to retry
@@ -2457,44 +2499,7 @@ public class SchemaChangeHandler extends AlterHandler {
             task.setLatch(countDownLatch);
             batchTask.addTask(task);
         }
-        if (!FeConstants.runningUnitTest) {
-            // send all tasks and wait them finished
-            AgentTaskQueue.addBatchTask(batchTask);
-            AgentTaskExecutor.submit(batchTask);
-            LOG.info("send update tablet meta task for table {}, partitions {}, number: {}",
-                    tableName, partitionName, batchTask.getTaskNum());
-
-            // estimate timeout
-            long timeout = Config.tablet_create_timeout_second * 1000L * totalTaskNum;
-            timeout = Math.min(timeout, Config.max_create_table_timeout_second * 1000L);
-            boolean ok = false;
-            try {
-                ok = countDownLatch.await(timeout, TimeUnit.MILLISECONDS);
-            } catch (InterruptedException e) {
-                LOG.warn("InterruptedException: ", e);
-            }
-
-            if (!ok || !countDownLatch.getStatus().ok()) {
-                String errMsg = "Failed to update partition[" + partitionName + "]. tablet meta.";
-                // clear tasks
-                AgentTaskQueue.removeBatchTask(batchTask, TTaskType.UPDATE_TABLET_META_INFO);
-
-                if (!countDownLatch.getStatus().ok()) {
-                    errMsg += " Error: " + countDownLatch.getStatus().getErrorMsg();
-                } else {
-                    List<Map.Entry<Long, Set<Long>>> unfinishedMarks = countDownLatch.getLeftMarks();
-                    // only show at most 3 results
-                    List<Map.Entry<Long, Set<Long>>> subList =
-                            unfinishedMarks.subList(0, Math.min(unfinishedMarks.size(), 3));
-                    if (!subList.isEmpty()) {
-                        errMsg += " Unfinished mark: " + Joiner.on(", ").join(subList);
-                    }
-                }
-                errMsg += ". This operation maybe partial successfully, You should retry until success.";
-                LOG.warn(errMsg);
-                throw new DdlException(errMsg);
-            }
-        }
+			  updateNotInTest(tableName, partitionName, batchTask, totalTaskNum, countDownLatch);
     }
 
     /**
@@ -2547,44 +2552,7 @@ public class SchemaChangeHandler extends AlterHandler {
             task.setLatch(countDownLatch);
             batchTask.addTask(task);
         }
-        if (!FeConstants.runningUnitTest) {
-            // send all tasks and wait them finished
-            AgentTaskQueue.addBatchTask(batchTask);
-            AgentTaskExecutor.submit(batchTask);
-            LOG.info("send update tablet meta task for table {}, partitions {}, number: {}",
-                    tableName, partitionName, batchTask.getTaskNum());
-
-            // estimate timeout
-            long timeout = Config.tablet_create_timeout_second * 1000L * totalTaskNum;
-            timeout = Math.min(timeout, Config.max_create_table_timeout_second * 1000L);
-            boolean ok = false;
-            try {
-                ok = countDownLatch.await(timeout, TimeUnit.MILLISECONDS);
-            } catch (InterruptedException e) {
-                LOG.warn("InterruptedException: ", e);
-            }
-
-            if (!ok || !countDownLatch.getStatus().ok()) {
-                String errMsg = "Failed to update partition[" + partitionName + "]. tablet meta.";
-                // clear tasks
-                AgentTaskQueue.removeBatchTask(batchTask, TTaskType.UPDATE_TABLET_META_INFO);
-
-                if (!countDownLatch.getStatus().ok()) {
-                    errMsg += " Error: " + countDownLatch.getStatus().getErrorMsg();
-                } else {
-                    List<Map.Entry<Long, Set<Long>>> unfinishedMarks = countDownLatch.getLeftMarks();
-                    // only show at most 3 results
-                    List<Map.Entry<Long, Set<Long>>> subList =
-                            unfinishedMarks.subList(0, Math.min(unfinishedMarks.size(), 3));
-                    if (!subList.isEmpty()) {
-                        errMsg += " Unfinished mark: " + Joiner.on(", ").join(subList);
-                    }
-                }
-                errMsg += ". This operation maybe partial successfully, You should retry until success.";
-                LOG.warn(errMsg);
-                throw new DdlException(errMsg);
-            }
-        }
+			  updateNotInTest(tableName, partitionName, batchTask, totalTaskNum, countDownLatch);
     }
 
     public void updateTableConstraint(Database db, String tableName, Map<String, String> properties)
