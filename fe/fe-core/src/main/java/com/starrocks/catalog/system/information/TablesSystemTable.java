@@ -22,35 +22,14 @@ import com.starrocks.thrift.TSchemaTableType;
 
 import static com.starrocks.catalog.system.SystemTable.FN_REFLEN;
 import static com.starrocks.catalog.system.SystemTable.NAME_CHAR_LEN;
-import static com.starrocks.catalog.system.SystemTable.builder;
+import static com.starrocks.catalog.system.SystemTable.virtualTableBuilder;
 
 public class TablesSystemTable {
     public static final int MY_CS_NAME_SIZE = 32;
     private static final String NAME = "tables";
 
     public static SystemTable create(String catalogName) {
-        return new SystemTable(catalogName, SystemId.TABLES_ID, NAME, Table.TableType.SCHEMA, builder()
-                .column("TABLE_CATALOG", ScalarType.createVarchar(FN_REFLEN))
-                .column("TABLE_SCHEMA", ScalarType.createVarchar(NAME_CHAR_LEN))
-                .column("TABLE_NAME", ScalarType.createVarchar(NAME_CHAR_LEN))
-                .column("TABLE_TYPE", ScalarType.createVarchar(NAME_CHAR_LEN))
-                .column("ENGINE", ScalarType.createVarchar(NAME_CHAR_LEN))
-                .column("VERSION", ScalarType.createType(PrimitiveType.BIGINT))
-                .column("ROW_FORMAT", ScalarType.createVarchar(10))
-                .column("TABLE_ROWS", ScalarType.createType(PrimitiveType.BIGINT))
-                .column("AVG_ROW_LENGTH", ScalarType.createType(PrimitiveType.BIGINT))
-                .column("DATA_LENGTH", ScalarType.createType(PrimitiveType.BIGINT))
-                .column("MAX_DATA_LENGTH", ScalarType.createType(PrimitiveType.BIGINT))
-                .column("INDEX_LENGTH", ScalarType.createType(PrimitiveType.BIGINT))
-                .column("DATA_FREE", ScalarType.createType(PrimitiveType.BIGINT))
-                .column("AUTO_INCREMENT", ScalarType.createType(PrimitiveType.BIGINT))
-                .column("CREATE_TIME", ScalarType.createType(PrimitiveType.DATETIME))
-                .column("UPDATE_TIME", ScalarType.createType(PrimitiveType.DATETIME))
-                .column("CHECK_TIME", ScalarType.createType(PrimitiveType.DATETIME))
-                .column("TABLE_COLLATION", ScalarType.createVarchar(MY_CS_NAME_SIZE))
-                .column("CHECKSUM", ScalarType.createType(PrimitiveType.BIGINT))
-                .column("CREATE_OPTIONS", ScalarType.createVarchar(255))
-                .column("TABLE_COMMENT", ScalarType.createVarchar(2048))
-                .build(), TSchemaTableType.SCH_TABLES);
+      return new SystemTable(catalogName, SystemId.TABLES_ID, NAME, Table.TableType.SCHEMA,
+				virtualTableBuilder().build(), TSchemaTableType.SCH_TABLES);
     }
 }

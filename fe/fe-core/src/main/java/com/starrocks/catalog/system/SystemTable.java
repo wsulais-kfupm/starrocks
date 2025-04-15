@@ -81,6 +81,31 @@ public class SystemTable extends Table {
 
     private final String catalogName;
 
+		static SystemTable virtualTableBuilder() {
+			return builder()
+									.column("TABLE_CATALOG", ScalarType.createVarchar(FN_REFLEN))
+									.column("TABLE_SCHEMA", ScalarType.createVarchar(NAME_CHAR_LEN))
+									.column("TABLE_NAME", ScalarType.createVarchar(NAME_CHAR_LEN))
+									.column("TABLE_TYPE", ScalarType.createVarchar(NAME_CHAR_LEN))
+									.column("ENGINE", ScalarType.createVarchar(NAME_CHAR_LEN))
+									.column("VERSION", ScalarType.createType(PrimitiveType.BIGINT))
+									.column("ROW_FORMAT", ScalarType.createVarchar(10))
+									.column("TABLE_ROWS", ScalarType.createType(PrimitiveType.BIGINT))
+									.column("AVG_ROW_LENGTH", ScalarType.createType(PrimitiveType.BIGINT))
+									.column("DATA_LENGTH", ScalarType.createType(PrimitiveType.BIGINT))
+									.column("MAX_DATA_LENGTH", ScalarType.createType(PrimitiveType.BIGINT))
+									.column("INDEX_LENGTH", ScalarType.createType(PrimitiveType.BIGINT))
+									.column("DATA_FREE", ScalarType.createType(PrimitiveType.BIGINT))
+									.column("AUTO_INCREMENT", ScalarType.createType(PrimitiveType.BIGINT))
+									.column("CREATE_TIME", ScalarType.createType(PrimitiveType.DATETIME))
+									.column("UPDATE_TIME", ScalarType.createType(PrimitiveType.DATETIME))
+									.column("CHECK_TIME", ScalarType.createType(PrimitiveType.DATETIME))
+									.column("TABLE_COLLATION", ScalarType.createVarchar(MY_CS_NAME_SIZE))
+									.column("CHECKSUM", ScalarType.createType(PrimitiveType.BIGINT))
+									.column("CREATE_OPTIONS", ScalarType.createVarchar(255))
+				          .column("TABLE_COMMENT", ScalarType.createVarchar(2048));
+		}
+
     public SystemTable(long id, String name, TableType type, List<Column> baseSchema,
                        TSchemaTableType schemaTableType) {
         this(DEFAULT_INTERNAL_CATALOG_NAME, id, name, type, baseSchema, schemaTableType);
