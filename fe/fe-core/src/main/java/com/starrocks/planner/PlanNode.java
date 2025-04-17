@@ -375,7 +375,7 @@ abstract public class PlanNode extends TreeNode<PlanNode> {
         return expBuilder.toString();
     }
 
-    protected final String getVerboseExplain(String rootPrefix, String prefix) {
+		protected final StringBuilder getExplainTemplate(String rootPrefix, String prefix) {
         StringBuilder expBuilder = new StringBuilder();
         String detailPrefix = prefix;
         boolean traverseChildren = children != null
@@ -406,6 +406,11 @@ abstract public class PlanNode extends TreeNode<PlanNode> {
                 expBuilder.append(detailPrefix + "- " + rf.toExplainString(id.asInt()) + "\n");
             }
         }
+				return expBuilder;
+		}
+
+    protected final String getVerboseExplain(String rootPrefix, String prefix) {
+        StringBuilder expBuilder = getExplainTemplate(rootPrefix, prefix);
         // Print the children
         if (traverseChildren) {
             expBuilder.append(detailPrefix).append("\n");
@@ -423,36 +428,7 @@ abstract public class PlanNode extends TreeNode<PlanNode> {
     }
 
     protected final String getCostExplain(String rootPrefix, String prefix) {
-        StringBuilder expBuilder = new StringBuilder();
-        String detailPrefix = prefix;
-        boolean traverseChildren = children != null
-                && children.size() > 0
-                && !(this instanceof ExchangeNode);
-        if (traverseChildren) {
-            detailPrefix += "|  ";
-        } else {
-            detailPrefix += "   ";
-        }
-
-        // Print the current node
-        // The plan node header line will be prefixed by rootPrefix and the remaining details
-        // will be prefixed by detailPrefix.
-        expBuilder.append(rootPrefix).append(id.asInt()).append(":").append(planNodeName).append("\n");
-        expBuilder.append(getNodeVerboseExplain(detailPrefix));
-        if (hasNullableGenerateChild) {
-            expBuilder.append(detailPrefix).append("hasNullableGenerateChild: ")
-                    .append(hasNullableGenerateChild).append("\n");
-        }
-        if (limit != -1) {
-            expBuilder.append(detailPrefix).append("limit: ").append(limit).append("\n");
-        }
-        expBuilder.append(detailPrefix).append("cardinality: ").append(cardinality).append("\n");
-        if (!probeRuntimeFilters.isEmpty()) {
-            expBuilder.append(detailPrefix + "probe runtime filters:\n");
-            for (RuntimeFilterDescription rf : probeRuntimeFilters) {
-                expBuilder.append(detailPrefix + "- " + rf.toExplainString(id.asInt()) + "\n");
-            }
-        }
+        StringBuilder expBuilder = getExplainTemplate(rootPrefix, prefix);
         if (!planNodeName.equals("EXCHANGE")) {
             expBuilder.append(detailPrefix).append("column statistics: \n").append(getColumnStatistics(detailPrefix));
         }
