@@ -525,41 +525,7 @@ public class RangePartitionInfo extends PartitionInfo {
                 new ArrayList<Map.Entry<Long, Range<PartitionKey>>>(this.idToRange.entrySet());
         Collections.sort(entries, RangeUtils.RANGE_MAP_ENTRY_COMPARATOR);
 
-        idx = 0;
-        PartitionInfo tblPartitionInfo = table.getPartitionInfo();
-
-        String replicationNumStr = table.getTableProperty().getProperties().get("replication_num");
-        short replicationNum;
-        if (replicationNumStr == null) {
-            replicationNum = RunMode.defaultReplicationNum();
-        } else {
-            replicationNum = Short.parseShort(replicationNumStr);
-        }
-
-        for (Map.Entry<Long, Range<PartitionKey>> entry : entries) {
-            Partition partition = table.getPartition(entry.getKey());
-            String partitionName = partition.getName();
-            Range<PartitionKey> range = entry.getValue();
-
-            // print all partitions' range is fixed range, even if some of them is created by less than range
-            sb.append("PARTITION ").append(partitionName).append(" VALUES [");
-            sb.append(range.lowerEndpoint().toSql());
-            sb.append(", ").append(range.upperEndpoint().toSql()).append(")");
-
-            if (partitionId != null) {
-                partitionId.add(entry.getKey());
-                break;
-            }
-            short curPartitionReplicationNum = tblPartitionInfo.getReplicationNum(entry.getKey());
-            if (curPartitionReplicationNum != replicationNum) {
-                sb.append("(").append("\"replication_num\" = \"").append(curPartitionReplicationNum).append("\")");
-            }
-            if (idx != entries.size() - 1) {
-                sb.append(",\n");
-            }
-            idx++;
-        }
-        sb.append(")");
+				MetaUtils.rangeParitionHelper(table, patitionId, sb);
         return sb.toString();
     }
 
